@@ -13,12 +13,40 @@ class Platformer extends Phaser.Scene {
         this.SCALE = 2.0;
         this.poweredup = false;
         this.poweruptime = 1000;
+        this.doubleJump = 2;
+        this.collectibles = 15;
     }
 
     create() {
         // Create a new tilemap game object which uses 18x18 pixel tiles, and is
         // 45 tiles wide and 25 tiles tall.
         this.map = this.add.tilemap("platformer-level-1", 18, 18, 45, 25);
+
+        this.background_back = this.add.tileSprite(0, 0, this.map.widthInPixels * 3, this.map.heightInPixels, "bg_back");
+        this.background_back.setOrigin(0);
+        this.background_back.setScrollFactor(0, 2.5);
+
+        this.background_front = this.add.tileSprite(0, 0, this.map.widthInPixels * 3, this.map.heightInPixels, "bg_front");
+        this.background_front.setOrigin(0);
+        this.background_front.setScrollFactor(0, 2.5);
+
+        this.ding = this.sound.add("gem_sound", { loop: false });
+
+        this.titletext = this.add.text(100, 160, "The Artifactory", { fontSize: '16px', fill: '#fff'});
+        this.titletext.setColor("white");
+        //this.wintext.visible = false;
+        this.titletext.setOrigin(0.5);
+
+        this.resettext = this.add.text(165, 180, "Press 'R' to restart after level is completed.", { fontSize: '10px', fill: '#fff'});
+        this.resettext.setColor("white");
+        //this.wintext.visible = false;
+        this.resettext.setOrigin(0.5);
+
+        this.wintext = this.add.text(100, 150, "Level: Incomplete", { fontSize: '8px', fill: '#fff'});
+        this.wintext.setColor("white");
+        //this.wintext.visible = false;
+        this.wintext.setOrigin(0.4);
+
 
         // Create a game tier for power up 
 
@@ -88,6 +116,10 @@ class Platformer extends Phaser.Scene {
         // TODO: Add coin collision handler
         this.physics.add.overlap(my.sprite.player, this.coinGroup, (obj1, obj2) => {
             obj2.destroy(); // remove coin on overlap
+            this.ding.play();
+            this.collectibles -= 1;
+            //console.log(this.collectibles);
+
         });
 
         this.physics.add.overlap(my.sprite.player, this.powerup, (obj1, obj2) => {
@@ -117,7 +149,7 @@ class Platformer extends Phaser.Scene {
 
         // TODO: Add movement particle vfx here
         my.vfx.walking = this.add.particles(0, 0, "kenny-particles", {
-            frame: ['smoke_03.png', 'smoke_09.png'],
+            frame: ['spark_01.png', 'spark_03.png'],
             // TODO: Try: add random: true
             scale: {start: 0.03, end: 0.1},
             // TODO: Try: maxAliveParticles: 8,
@@ -127,17 +159,36 @@ class Platformer extends Phaser.Scene {
         });
 
         my.vfx.walking.stop();
+
+        my.vfx.jumping = this.add.particles(0, 0, "kenny-particles", {
+            frame: ['magic_01.png', 'magic_03.png'],
+            // TODO: Try: add random: true
+            scale: {start: 0.03, end: 0.1},
+            // TODO: Try: maxAliveParticles: 8,
+            lifespan: 350,
+            // TODO: Try: gravityY: -400,
+            alpha: {start: 1, end: 0.1}, 
+        });
+
+        my.vfx.jumping.stop();
         
 
         // TODO: add camera code here
         this.cameras.main.setBounds(0, -5, this.map.widthInPixels, this.map.heightInPixels);
         this.cameras.main.startFollow(my.sprite.player, true, 0.25, 0.25); // (target, [,roundPixels][,lerpX][,lerpY])
         this.cameras.main.setDeadzone(200, 50);
-        this.cameras.main.setZoom(this.SCALE * 1);
+        this.cameras.main.setZoom(this.SCALE * 1.25);
 
     }
 
     update() {
+
+        this.background_front.setTilePosition(this.cameras.main.scrollX);
+        this.background_back.setTilePosition(this.cameras.main.scrollX);
+
+        this.wintext.x = my.sprite.player.body.x;
+        this.wintext.y = my.sprite.player.body.y - 10;
+
         if(this.aKey.isDown) {
             my.sprite.player.setAccelerationX(-this.ACCELERATION);
             my.sprite.player.setFlip(true, false);
@@ -202,9 +253,18 @@ class Platformer extends Phaser.Scene {
         }
 
         if(!my.sprite.player.body.blocked.down) {
+
+            my.vfx.jumping.setParticleSpeed(-this.PARTICLE_VELOCITY, 0);
             my.sprite.player.anims.play('jump', true);
+            my.vfx.jumping.start();
         }
-        if(my.sprite.player.body.blocked.down && Phaser.Input.Keyboard.JustDown(this.spaceKey)) {
+        else
+        {
+            my.vfx.jumping.stop();
+            this.doubleJump = 2;
+        }
+
+        if(Phaser.Input.Keyboard.JustDown(this.spaceKey) && this.doubleJump > 0) {
             if (this.poweredup)
             {
                 my.sprite.player.body.setVelocityY(this.JUMP_VELOCITY * 1.3);
@@ -213,10 +273,16 @@ class Platformer extends Phaser.Scene {
             {
                 my.sprite.player.body.setVelocityY(this.JUMP_VELOCITY);
             }
+            this.doubleJump -= 1;
         }
 
-        if(Phaser.Input.Keyboard.JustDown(this.rKey)) {
+        if(Phaser.Input.Keyboard.JustDown(this.rKey) && this.collectibles <= 14) {
             this.scene.restart();
+        }
+
+        if (this.collectibles <= 14)
+        {
+            this.wintext.setText("Level: Complete");
         }
     }
 }
