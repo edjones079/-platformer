@@ -5,10 +5,10 @@ class Platformer extends Phaser.Scene {
 
     init() {
         // variables and settings
-        this.ACCELERATION = 400;
-        this.DRAG = 500;    // DRAG < ACCELERATION = icy slide
-        this.physics.world.gravity.y = 1500;
-        this.JUMP_VELOCITY = -600;
+        this.ACCELERATION = 200;
+        this.DRAG = 300;    // DRAG < ACCELERATION = icy slide
+        this.physics.world.gravity.y = 1250;
+        this.JUMP_VELOCITY = -400;
         this.PARTICLE_VELOCITY = 50;
         this.SCALE = 2.0;
         this.poweredup = false;
@@ -28,35 +28,42 @@ class Platformer extends Phaser.Scene {
         // Add a tileset to the map
         // First parameter: name we gave the tileset in Tiled
         // Second parameter: key for the tilesheet (from this.load.image in Load.js)
-        this.tileset = this.map.addTilesetImage("kenny_tilemap_packed", "tilemap_tiles");
+        this.tileset_industrial = this.map.addTilesetImage("industrial-pack", "industrial_tiles");
+        this.tileset_dungeon = this.map.addTilesetImage("tiny_dungeon-pack", "dungeon_tiles");
 
         // Create a layer
-        this.groundLayer = this.map.createLayer("Ground-n-Platforms", this.tileset, 0, 0);
+        this.groundLayer = this.map.createLayer("Ground-n-Platforms", this.tileset_industrial, 0, 0);
+        this.secondLayer = this.map.createLayer("Background-n-Aesthetics", this.tileset_industrial, 0, 0);
+        this.sludgeLayer = this.map.createLayer("Sludge", this.tileset_industrial, 0, 0);
 
         // Make it collidable
         this.groundLayer.setCollisionByProperty({
             collides: true
         });
 
+        this.sludgeLayer.setCollisionByProperty({
+            collides: true
+        });
+
         // TODO: Add createFromObjects here
         this.coins = this.map.createFromObjects("Objects", {
-            name: "coin",
-            key: "tilemap_sheet",
-            frame: 151
+            name: "elixir",
+            key: "tilemap_sheet_dungeon",
+            frame: 116
         });
 
         this.spawn = this.map.createFromObjects("Objects", {
             name: "spawn",
-            key: "tilemap_sheet",
-            frame: 112
+            key: "tilemap_sheet_industrial",
+            frame: 65
         });
 
         console.log(this.spawn);
 
         this.powerup = this.map.createFromObjects("Objects", {
             name: "jump",
-            key: "tilemap_sheet",
-            frame: 67
+            key: "tilemap_sheet_industrial",
+            frame: 61
         });
 
         // TODO: Add turn into Arcade Physics here
@@ -64,12 +71,17 @@ class Platformer extends Phaser.Scene {
         this.physics.world.enable(this.spawn, Phaser.Physics.Arcade.STATIC_BODY);
         this.physics.world.enable(this.powerup, Phaser.Physics.Arcade.STATIC_BODY);
 
+        this.physics.world.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels, true, true, true, true);
+
         // set up player avatar
-        my.sprite.player = this.physics.add.sprite(this.spawn[0]['x'], this.spawn[0]['y'], "platformer_characters", "tile_0000.png");
+        my.sprite.player = this.physics.add.sprite(this.spawn[0]['x'], this.spawn[0]['y'] - 20, "platformer_characters", "adventurer-0");
         my.sprite.player.setCollideWorldBounds(true);
+        my.sprite.player.body.setSize(15, 25, true);
+        my.sprite.player.body.setOffset(18, 10);
 
         // Enable collision handling
         this.physics.add.collider(my.sprite.player, this.groundLayer);
+        this.physics.add.collider(my.sprite.player, this.sludgeLayer);
 
         this.coinGroup = this.add.group(this.coins);
 
@@ -83,11 +95,19 @@ class Platformer extends Phaser.Scene {
             this.poweredup = true;
         });
 
+        this.physics.world.collide(my.sprite.player.body, this.sludgeLayer, (obj1, obj2) => {
+            this.scene.restart(); // remove coin on overlap
+        });
+
 
         // set up Phaser-provided cursor key input
         cursors = this.input.keyboard.createCursorKeys();
 
         this.rKey = this.input.keyboard.addKey('R');
+        this.aKey = this.input.keyboard.addKey('A');
+        this.dKey = this.input.keyboard.addKey('D');
+
+        this.spaceKey = this.input.keyboard.addKey('SPACE');
 
         // debug key listener (assigned to D key)
         this.input.keyboard.on('keydown-D', () => {
@@ -110,18 +130,19 @@ class Platformer extends Phaser.Scene {
         
 
         // TODO: add camera code here
-        this.cameras.main.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
+        this.cameras.main.setBounds(0, -5, this.map.widthInPixels, this.map.heightInPixels);
         this.cameras.main.startFollow(my.sprite.player, true, 0.25, 0.25); // (target, [,roundPixels][,lerpX][,lerpY])
-        this.cameras.main.setDeadzone(50, 50);
-        this.cameras.main.setZoom(this.SCALE);
+        this.cameras.main.setDeadzone(200, 50);
+        this.cameras.main.setZoom(this.SCALE * 1);
 
     }
 
     update() {
-        if(cursors.left.isDown) {
+        if(this.aKey.isDown) {
             my.sprite.player.setAccelerationX(-this.ACCELERATION);
-            my.sprite.player.resetFlip();
-            my.sprite.player.anims.play('walk', true);
+            my.sprite.player.setFlip(true, false);
+            if (my.sprite.player.body.blocked.down)
+                my.sprite.player.anims.play('walk', true);
             // TODO: add particle following code here
 
             my.vfx.walking.startFollow(my.sprite.player, my.sprite.player.displayWidth/2-10, my.sprite.player.displayHeight/2-5, false);
@@ -136,10 +157,11 @@ class Platformer extends Phaser.Scene {
 
             }
 
-        } else if(cursors.right.isDown) {
+        } else if(this.dKey.isDown) {
             my.sprite.player.setAccelerationX(this.ACCELERATION);
-            my.sprite.player.setFlip(true, false);
-            my.sprite.player.anims.play('walk', true);
+            my.sprite.player.resetFlip();
+            if (my.sprite.player.body.blocked.down)
+                my.sprite.player.anims.play('walk', true);
             // TODO: add particle following code here
 
             my.vfx.walking.startFollow(my.sprite.player, my.sprite.player.displayWidth/2-10, my.sprite.player.displayHeight/2-5, false);
@@ -158,7 +180,9 @@ class Platformer extends Phaser.Scene {
             // Set acceleration to 0 and have DRAG take over
             my.sprite.player.setAccelerationX(0);
             my.sprite.player.setDragX(this.DRAG);
-            my.sprite.player.anims.play('idle');
+
+            if (my.sprite.player.body.blocked.down)
+                my.sprite.player.anims.play('idle', true);
             // TODO: have the vfx stop playing
 
             my.vfx.walking.stop();
@@ -178,9 +202,9 @@ class Platformer extends Phaser.Scene {
         }
 
         if(!my.sprite.player.body.blocked.down) {
-            my.sprite.player.anims.play('jump');
+            my.sprite.player.anims.play('jump', true);
         }
-        if(my.sprite.player.body.blocked.down && Phaser.Input.Keyboard.JustDown(cursors.up)) {
+        if(my.sprite.player.body.blocked.down && Phaser.Input.Keyboard.JustDown(this.spaceKey)) {
             if (this.poweredup)
             {
                 my.sprite.player.body.setVelocityY(this.JUMP_VELOCITY * 1.3);

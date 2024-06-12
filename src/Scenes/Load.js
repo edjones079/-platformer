@@ -7,16 +7,24 @@ class Load extends Phaser.Scene {
         this.load.setPath("./assets/");
 
         // Load characters spritesheet
-        this.load.atlas("platformer_characters", "tilemap-characters-packed.png", "tilemap-characters-packed.json");
+        this.load.atlas("platformer_characters", "adventurer-v1.5-Sheet.png", "adventurer-v1.5-Sheet.json");
+
+        //console.log('platformer_characters');
 
         // Load tilemap information
-        this.load.image("tilemap_tiles", "tilemap_packed.png");                         // Packed tilemap
+        this.load.image("industrial_tiles", "industrial_pack.png");   
+        this.load.image("dungeon_tiles", "tiny_dungeon.png");                            // Packed tilemap
         this.load.tilemapTiledJSON("platformer-level-1", "platformer-level-1.tmj");   // Tilemap in JSON
 
         // Load the tilemap as a spritesheet
-        this.load.spritesheet("tilemap_sheet", "tilemap_packed.png", {
+        this.load.spritesheet("tilemap_sheet_industrial", "industrial_pack.png", {
             frameWidth: 18,
             frameHeight: 18
+        });
+
+        this.load.spritesheet("tilemap_sheet_dungeon", "tiny_dungeon.png", {
+            frameWidth: 16,
+            frameHeight: 16
         });
 
         // Oooh, fancy. A multi atlas is a texture atlas which has the textures spread
@@ -32,31 +40,41 @@ class Load extends Phaser.Scene {
         this.anims.create({
             key: 'walk',
             frames: this.anims.generateFrameNames('platformer_characters', {
-                prefix: "tile_",
-                start: 0,
-                end: 1,
-                suffix: ".png",
-                zeroPad: 4
+                prefix: "adventurer-",
+                start: 8,
+                end: 13,
+                //suffix: "-0",
+                zeroPad: 1
             }),
-            frameRate: 15,
+            frameRate: 10,
             repeat: -1
         });
 
         this.anims.create({
             key: 'idle',
-            defaultTextureKey: "platformer_characters",
-            frames: [
-                { frame: "tile_0000.png" }
-            ],
+            //defaultTextureKey: "platformer_characters",
+            frames: this.anims.generateFrameNames('platformer_characters', {
+                prefix: "adventurer-",
+                start: 38,
+                end: 41,
+                //suffix: "-0",
+                zeroPad: 1
+            }),
+            frameRate: 10,
             repeat: -1
         });
 
         this.anims.create({
             key: 'jump',
-            defaultTextureKey: "platformer_characters",
-            frames: [
-                { frame: "tile_0001.png" }
-            ],
+            //defaultTextureKey: "platformer_characters",
+            frames: this.anims.generateFrameNames('platformer_characters', {
+                prefix: "adventurer-",
+                start: 14,
+                end: 21,
+                //suffix: "-0",
+                zeroPad: 1
+            }),
+            frameRate: 16
         });
 
          // ...and pass to the next Scene
